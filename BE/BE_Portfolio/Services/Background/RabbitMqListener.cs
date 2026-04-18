@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using BE_Portfolio.Models.Commons;
 using BE_Portfolio.Models.Specification;
@@ -28,14 +28,22 @@ public class RabbitMqListener : BackgroundService
         _logger = logger;
         _factory = new ConnectionFactory
         {
-            HostName = _settings.HostName,
-            Port = 5672,
-            UserName = _settings.UserName,
-            Password = _settings.Password,
-            VirtualHost = "/",
             AutomaticRecoveryEnabled = true,
             NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
         };
+
+        if (!string.IsNullOrEmpty(_settings.Uri))
+        {
+            _factory.Uri = new Uri(_settings.Uri);
+        }
+        else
+        {
+            _factory.HostName = _settings.HostName;
+            _factory.Port = 5672;
+            _factory.UserName = _settings.UserName;
+            _factory.Password = _settings.Password;
+            _factory.VirtualHost = "/";
+        }
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken)

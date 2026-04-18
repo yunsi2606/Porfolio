@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using BE_Portfolio.Models.Commons;
 using BE_Portfolio.Models.Specification;
@@ -20,15 +20,24 @@ public sealed class RabbitMqEmailPublisher : IEmailQueue, IAsyncDisposable
     {
         _cfg = opts.Value;
         _logger = logger;
+        
         _factory = new ConnectionFactory {
-            HostName = _cfg.HostName,
-            Port = 5672,
-            UserName = _cfg.UserName,
-            Password = _cfg.Password,
-            VirtualHost = "/",
             AutomaticRecoveryEnabled = true,
             NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
         };
+
+        if (!string.IsNullOrEmpty(_cfg.Uri))
+        {
+            _factory.Uri = new Uri(_cfg.Uri);
+        }
+        else
+        {
+            _factory.HostName = _cfg.HostName;
+            _factory.Port = 5672;
+            _factory.UserName = _cfg.UserName;
+            _factory.Password = _cfg.Password;
+            _factory.VirtualHost = "/";
+        }
     }
 
     private async Task EnsureChannelAsync(CancellationToken ct)
