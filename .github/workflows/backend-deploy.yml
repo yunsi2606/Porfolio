@@ -30,24 +30,28 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Log in to Azure Container Registry
-      uses: azure/docker-login@v2
-      with:
-        login-server: ${{ env.REGISTRY_NAME }}.azurecr.io
-        username: ${{ secrets.REGISTRY_USERNAME }}
-        password: ${{ secrets.REGISTRY_PASSWORD }}
+    - name: Login to ACR
+      run: az acr login --name ${{ env.REGISTRY_NAME }}
 
     - name: Build and Push Docker image
       working-directory: ./BE
       run: |
-        docker build -f ${{ env.DOCKERFILE_PATH }} -t ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} -t ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest .
-        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} --all-tags
+        IMAGE_TAG="${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+        IMAGE_LATEST="${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest"
 
-    - name: Deploy to Azure Container App
-      uses: azure/container-apps-deploy-action@v2
+        docker build -f ${{ env.DOCKERFILE_PATH }} \
+          -t "$IMAGE_TAG" \
+          -t "$IMAGE_LATEST" .
+
+        docker push "$IMAGE_TAG"
+        docker push "$IMAGE_LATEST"
+
+    - name: Deploy to Azure Container Apps
+      uses: azure/container-apps-deploy-action@v1
       with:
         resourceGroup: ${{ env.RESOURCE_GROUP }}
-        containerAppEnvironment: ${{ env.CONTAINER_APP_ENV_NAME }}
         containerAppName: ${{ env.CONTAINER_APP_NAME }}
         imageToDeploy: ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
-        location: eastasia
+        registryUrl: ${{ env.REGISTRY_NAME }}.azurecr.io
+        registryUsername: ${{ secrets.REGISTRY_USERNAME }}
+        registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
